@@ -1,0 +1,91 @@
+/* historial.css */
+
+/* Body background image with gentle filter */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('/frontend/img/red.png') no-repeat center center fixed;
+  background-size: cover;
+  filter: brightness(1.05) contrast(1.05) saturate(1.15);
+  z-index: -1;
+}
+
+/* Main content container for contrast */
+main.container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* Section titles with better contrast and spacing */
+.section-title {
+  color: #212529;
+  border-left: 4px solid #0d6efd;
+  padding-left: 0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.5rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Card styling for all chart cards */
+.chart-card {
+  background: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+}
+
+/* Ensure canvases fill their card container */
+.chart-card canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Card headings */
+.card h5 {
+  color: #343a40;
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Navbar adjustments for clarity */
+.navbar {
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+.navbar-brand {
+  font-size: 1.5rem;
+  color: #ffffff;
+}
+.nav-link {
+  font-size: 1rem;
+  color: #e9ecef;
+}
+.nav-link.active,
+.nav-link:hover {
+  color: #ffffff;
+}
+
+/* Footer spacing if needed */
+footer {
+  margin-top: 3rem;
+  padding: 1rem 0;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  main.container {
+    padding: 1rem;
+  }
+  .section-title {
+    font-size: 1.25rem;
+  }
+  .chart-card {
+    padding: 0.75rem;
+  }
+}

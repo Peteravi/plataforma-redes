@@ -1,0 +1,78 @@
+/* Variables */
+:root {
+  --bs-primary: #0d6efd;
+  --bs-light-bg: rgba(255,255,255,0.95);
+  --border-radius: 0.6rem;
+}
+
+/* Fondo translúcido */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('/frontend/img/red.png') no-repeat center center fixed;
+  background-size: cover;
+  filter: brightness(1.05) contrast(1.05) saturate(1.15);
+  z-index: -1;
+}
+
+.card {
+  background-color: var(--bs-light-bg);
+  border: none;
+  border-radius: var(--border-radius);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+
+.card-header {
+  font-weight: 600;
+  font-size: 1.2rem;
+  border-bottom: none;
+}
+
+/* Botón programar */
+#programar-escaneo-btn {
+  border-radius: 0.35rem;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.2s;
+}
+#programar-escaneo-btn:hover {
+  background-color: #084298;
+  transform: translateY(-1px);
+}
+
+/* Resumen */
+#resumen-escaneo {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.resumen-item {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0.5rem 0;
+}
+.resumen-item:last-child {
+  border-bottom: none;
+}
+.resumen-item strong {
+  color: var(--bs-primary);
+}
+
+/* Tabla */
+#tabla-escaneos {
+  font-size: 0.95rem;
+}
+#tabla-escaneos th,
+#tabla-escaneos td {
+  text-align: center;
+}
+
+/* Estados */
+.estado-pendiente { color: #fd7e14 !important; }
+.estado-ejecutando { color: var(--bs-primary) !important; }
+.estado-completado { color: #198754 !important; }
+.estado-cancelado { color: #dc3545 !important; }

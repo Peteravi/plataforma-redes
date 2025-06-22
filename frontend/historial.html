@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Network Manager — Historial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <link href="/frontend/css/historial.css" rel="stylesheet" />
+</head>
+
+<body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-hdd-network me-2"></i>Network Manager
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/frontend/dashboard.html"><i
+                                class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/escaneo_automatico"><i class="bi bi-calendar-plus me-1"></i>Programar
+                            Escaneo</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/frontend/historial.html">
+                            <i class="bi bi-clock-history me-1"></i>Historial
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-gear me-1"></i>Configuración</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="navbar-text text-light me-3">
+                        <i class="bi bi-person-circle me-1"></i>Admin
+                    </span>
+                    <button class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <section class="mb-5">
+            <h3 class="section-title">Resumen Estadístico</h3>
+            <div class="row gy-4">
+                <div class="col-md-4">
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-avg"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-tipo"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-confianza"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5">
+            <h3 class="section-title">Alertas</h3>
+            <div class="row gy-4">
+                <div class="col-md-6">
+                    <h5>Alertas por Día</h5>
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-alerts-per-day"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Alertas por Tipo</h5>
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-alerts-by-type"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5">
+            <div class="row gy-4">
+                <div class="col-md-6">
+                    <h5>Dispositivos Más Frecuentes</h5>
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-top-devices"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Duración Promedio de Escaneo (día)</h5>
+                    <div class="card chart-card p-3">
+                        <canvas id="chart-scan-duration"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3 class="section-title">Serie de Tiempo de Escaneos</h3>
+            <div class="d-flex mb-3 align-items-center">
+                <label class="me-2 mb-0">Periodo:</label>
+                <select id="period-select" class="form-select w-auto">
+                    <option value="daily">Diario</option>
+                    <option value="monthly">Mensual</option>
+                </select>
+            </div>
+            <div class="card chart-card p-3">
+                <canvas id="chart-timeseries" height="100"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/frontend/js/historial.js"></script>
+</body>
+
+</html>
