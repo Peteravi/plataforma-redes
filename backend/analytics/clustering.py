@@ -1,82 +1,49 @@
-# backend/analytics/clustering.py
-
 import pandas as pd
-from sqlalchemy import create_engine
-from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 
-# 1) Define aquí la conexión (igual que en database.py)
-# Si cambias credenciales o host, hazlo solo en DB_URL
-DB_URL = "mysql+mysqlconnector://root:piteravi07@localhost/PlataformaRedes"
-ENGINE = create_engine(DB_URL, echo=False)
+from backend.database import get_connection
 
-def compute_device_clusters(k: int = 3) -> pd.DataFrame:
-    """
-    Extrae métricas de cada dispositivo, aplica K-Means y devuelve
-    un DataFrame con columnas [dispositivo_id, cluster].
-    """
-    # Métrica 1: frecuencia de logs
-    freq = pd.read_sql("""
-      SELECT d.dispositivo_id,
-             COUNT(ld.log_id) AS frecuencia
-      FROM logs_dispositivos ld
-      JOIN dispositivos d ON ld.dispositivo_id=d.dispositivo_id
-      GROUP BY d.dispositivo_id
-    """, ENGINE)
 
-    # Métrica 2: duración media de escaneos
-    dur = pd.read_sql("""
-      SELECT ld.dispositivo_id,
-             AVG(e.duracion_segundos) AS duracion_media
-      FROM logs_dispositivos ld
-      JOIN escaneos e ON ld.escaneo_id=e.escaneo_id
-      GROUP BY ld.dispositivo_id
-    """, ENGINE)
+def compute_device_clusters(k=3):
+    conn = get_connection()
+    if not conn:
+        return {
+            'status': 'error',
+            'message': 'No se pudo conectar a la base de datos',
+            'clusters': [],
+        }
 
-    # Métrica 3: número de notas
-    notas = pd.read_sql("""
-      SELECT dispositivo_id,
-             IFNULL(
-               (LENGTH(notas) - LENGTH(REPLACE(notas, '\\n', ''))) + 1,
-               0
-             ) AS n_notas
-      FROM dispositivos
-    """, ENGINE)
+    try:
+        query = """
+            SELECT
+                d.dispositivo_id,
+                COALESCE(d.nombre_dispositivo, d.mac) AS nombre,
+                COUNT(ld.id) AS num_escaneos,
+                SUM(CASE WHEN d.es_confiable = 1 THEN 1 ELSE 0 END) AS es_confiable_num,
+                0 AS alertas_generadas
+            FROM dispositivos d
+            LEFT JOIN logs_dispositivos ld ON d.dispositivo_id = ld.dispositivo_id
+            GROUP BY d.dispositivo_id, d.nombre_dispositivo, d.mac
+        """
 
-    # Métrica 4: veces marcado confiable
-    conf = pd.read_sql("""
-      SELECT dispositivo_id,
-             SUM(es_confiable) AS veces_confiable
-      FROM dispositivos
-      GROUP BY dispositivo_id
-    """, ENGINE)
+        df = pd.read_sql(query, conn)
 
-    # Métrica 5: alertas generadas
-    alerts = pd.read_sql("""
-      SELECT dispositivo_id,
-             COUNT(*) AS alertas_generadas
-      FROM alertas
-      WHERE dispositivo_id IS NOT NULL
-      GROUP BY dispositivo_id
-    """, ENGINE)
+        if df.empty:
+            return {
+                'status': 'success',
+                'clusters': [],
+                'message': 'No hay dispositivos suficientes para clusterizar',
+            }
 
-    # 2) Combina todo en un DataFrame
-    df = (freq
-          .merge(dur,    on='dispositivo_id', how='left')
-          .merge(notas,  on='dispositivo_id', how='left')
-          .merge(conf,   on='dispositivo_id', how='left')
-          .merge(alerts, on='dispositivo_id', how='left')
-          .fillna(0))
+        n = min(max(1, k), len(df))
+        features = df[['num_escaneos', 'es_confiable_num', 'alertas_generadas']].fillna(0)
 
-    features = df[['frecuencia', 'duracion_media', 'n_notas', 'veces_confiable', 'alertas_generadas']]
+        model = KMeans(n_clusters=n, random_state=42, n_init=10)
+        df['cluster'] = model.fit_predict(features)
 
-    # 3) Normaliza
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(features)
-
-    # 4) Aplica KMeans
-    model = KMeans(n_clusters=k, random_state=42)
-    df['cluster'] = model.fit_predict(X_scaled)
-
-    # 5) Devuelve solo las columnas necesarias
-    return df[['dispositivo_id', 'cluster']]
+        return {
+            'status': 'success',
+            'clusters': df[['dispositivo_id', 'nombre', 'cluster']].to_dict(orient='records'),
+        }
+    finally:
+        conn.close()

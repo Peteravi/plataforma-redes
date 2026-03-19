@@ -1,100 +1,188 @@
-# backend/services/escaneo_service.py
-
-import time
 import logging
+import threading
+import time
 from datetime import datetime
-from backend.utils.escaneo_red import escanear_red
-from backend.database import (
-    guardar_escaneo,
-    get_connection,
-    reprogramar_escaneo_periodico,
-    detectar_nuevos_dispositivos,
-    marcar_confiabilidad,
-)
-from backend.socketio_app import socketio  # instancia centralizada
 
+from backend.database import (
+    calcular_siguiente_fecha,
+    crear_alerta,
+    get_connection,
+    guardar_escaneo,
+    marcar_confiabilidad,
+    marcar_escaneo_programado_como_completado,
+    marcar_escaneo_programado_como_ejecutando,
+    marcar_escaneo_programado_como_fallido,
+    obtener_escaneos_programados,
+)
+from backend.utils.escaneo_red import escanear_red_local
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def realizar_escaneo():
+# Evita escaneos simultáneos dentro del mismo proceso
+_scan_lock = threading.Lock()
+
+
+def _obtener_dispositivo_id_por_mac(mac: str):
+    conn = get_connection()
+    if not conn:
+        return None
+
+    cursor = None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT dispositivo_id FROM dispositivos WHERE mac=%s',
+            (mac.upper().replace('-', ':'),)
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+    finally:
+        if cursor:
+            cursor.close()
+        conn.close()
+
+
+def _hacer_escaneo_real():
     inicio = time.time()
-    logger.info("Iniciando escaneo de red...")
-    dispositivos = escanear_red()
-    if not isinstance(dispositivos, list):
-        dispositivos = []
-
+    dispositivos = escanear_red_local()
     duracion = round(time.time() - inicio, 2)
-    success = guardar_escaneo(dispositivos, duracion)
-    status = 'success' if success else 'partial_success'
-    message = f"Escaneo completado en {duracion}s" + (" y guardado" if success else "")
 
-    nuevos = detectar_nuevos_dispositivos(dispositivos)
-    if nuevos:
-        logger.warning(f"{len(nuevos)} nuevos dispositivos detectados")
+    guardado_ok = guardar_escaneo(dispositivos, duracion)
+    if not guardado_ok:
+        return {
+            'status': 'error',
+            'message': 'No se pudo guardar el escaneo en la base de datos',
+            'duracion_segundos': duracion,
+            'dispositivos': dispositivos,
+        }
 
-    resultado = {
-        'status': status,
-        'dispositivos': dispositivos,
-        'total': len(dispositivos),
+    for dispositivo in dispositivos:
+        mac = (dispositivo.get('mac') or '').upper().replace('-', ':')
+        ip = dispositivo.get('ip')
+        nombre = dispositivo.get('nombre_dispositivo') or mac
+
+        if dispositivo.get('nuevo'):
+            crear_alerta(
+                tipo='nuevo_dispositivo',
+                mac=mac,
+                ip=ip,
+                mensaje=f'Se detectó un nuevo dispositivo: {nombre}',
+            )
+
+    return {
+        'status': 'success',
+        'message': 'Escaneo completado correctamente',
         'duracion_segundos': duracion,
-        'message': message
+        'total_dispositivos': len(dispositivos),
+        'dispositivos': dispositivos,
+        'timestamp': datetime.now().isoformat(),
     }
 
-    # Emitimos el evento al frontend
-    socketio.emit('scan_complete', resultado)
-    return resultado
 
-def ejecutar_escaneo_automatico():
-    while True:
-        conn = None
+def realizar_escaneo(forzar=False):
+    """
+    Si ya hay un escaneo en curso:
+    - forzar=False: devuelve busy
+    - forzar=True: espera al lock
+    """
+    acquired = _scan_lock.acquire(blocking=forzar)
+    if not acquired:
+        logger.warning('Se intentó iniciar un escaneo mientras otro sigue en ejecución')
+        return {
+            'status': 'busy',
+            'message': 'Ya hay un escaneo en ejecución'
+        }
+
+    try:
+        logger.info('Iniciando escaneo')
+        resultado = _hacer_escaneo_real()
+        logger.info('Escaneo finalizado con estado: %s', resultado.get('status'))
+        return resultado
+    except Exception as e:
+        logger.error(f'Error ejecutando escaneo: {e}', exc_info=True)
+        return {
+            'status': 'error',
+            'message': f'Error ejecutando escaneo: {e}'
+        }
+    finally:
+        _scan_lock.release()
+
+
+def marcar_confiabilidad_service(mac: str, es_confiable):
+    return marcar_confiabilidad(mac, bool(es_confiable))
+
+
+def procesar_escaneos_pendientes():
+    """
+    Procesa todos los escaneos vencidos.
+    Devuelve cuántos procesó.
+    """
+    ahora = datetime.now()
+    procesados = 0
+    programados = obtener_escaneos_programados(pendientes=True)
+
+    for item in programados:
+        fecha = datetime.fromisoformat(item['fecha_programada'])
+        if fecha > ahora:
+            continue
+
+        escaneo_id = item['id']
+        repeticion = item.get('repeticion', 'una_vez')
+
+        # Reclama el trabajo de forma atómica por BD
+        if not marcar_escaneo_programado_como_ejecutando(escaneo_id):
+            continue
+
         try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT * FROM escaneos_programados WHERE estado='pendiente' "
-                "ORDER BY fecha_programada ASC LIMIT 1"
+            logger.info('Ejecutando escaneo programado id=%s', escaneo_id)
+
+            # No permitas solapamiento con escaneo manual
+            resultado = realizar_escaneo(forzar=True)
+
+            if resultado.get('status') != 'success':
+                raise RuntimeError(resultado.get('message', 'El escaneo no terminó correctamente'))
+
+            siguiente_fecha = calcular_siguiente_fecha(fecha, repeticion)
+            marcar_escaneo_programado_como_completado(
+                escaneo_id,
+                siguiente_fecha=siguiente_fecha
             )
-            esc = cursor.fetchone()
-
-            if esc:
-                ahora = datetime.now(esc['fecha_programada'].tzinfo) \
-                        if hasattr(esc['fecha_programada'], 'tzinfo') else datetime.now()
-                espera = (esc['fecha_programada'] - ahora).total_seconds()
-                if espera > 0:
-                    time.sleep(min(espera, 60))
-                    continue
-
-                logger.info(f"Ejecutando escaneo programado ID={esc['id']}")
-                cursor.execute(
-                    "UPDATE escaneos_programados SET estado='ejecutando' WHERE id=%s",
-                    (esc['id'],)
-                )
-                conn.commit()
-
-                resultado = realizar_escaneo()
-
-                # Cambiamos 'error' por 'cancelado' para no truncar el ENUM
-                nuevo_estado = 'completado' if resultado['status'] == 'success' else 'cancelado'
-                cursor.execute(
-                    "UPDATE escaneos_programados SET estado=%s WHERE id=%s",
-                    (nuevo_estado, esc['id'])
-                )
-
-                if esc['repeticion'] != 'una_vez':
-                    reprogramar_escaneo_periodico(esc['id'])
-
-                conn.commit()
-            else:
-                time.sleep(60)
+            procesados += 1
 
         except Exception as e:
-            logger.error(f"Error en escaneo automático: {e}", exc_info=True)
-            time.sleep(60)
+            logger.error(
+                'Error procesando escaneo programado id=%s: %s',
+                escaneo_id,
+                e,
+                exc_info=True
+            )
+            marcar_escaneo_programado_como_fallido(escaneo_id, str(e))
 
-        finally:
-            if conn:
-                conn.close()
+    return procesados
 
-def marcar_confiabilidad_service(mac: str, es_confiable: bool) -> bool:
-    return marcar_confiabilidad(mac, es_confiable)
+
+def ejecutar_escaneo_automatico(stop_event=None, intervalo_segundos=10):
+    """
+    Bucle del scheduler.
+    - stop_event permite apagarlo ordenadamente.
+    - intervalo_segundos corto para reaccionar mejor.
+    """
+    logger.info('Scheduler automático iniciado')
+
+    if stop_event is None:
+        stop_event = threading.Event()
+
+    while not stop_event.is_set():
+        try:
+            procesados = procesar_escaneos_pendientes()
+            if procesados:
+                logger.info('Scheduler procesó %s escaneo(s)', procesados)
+        except Exception as e:
+            logger.error(f'Error en scheduler automático: {e}', exc_info=True)
+
+        stop_event.wait(intervalo_segundos)
+
+    logger.info('Scheduler automático detenido')

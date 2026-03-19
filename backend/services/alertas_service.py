@@ -1,16 +1,16 @@
-import logging
-from backend.database import obtener_alertas_pendientes
-
-logger = logging.getLogger(__name__)
+from backend.database import obtener_alertas_no_leidas
 
 
 def obtener_alertas():
-    """
-    Recupera las alertas pendientes de la BD.
-    """
-    try:
-        pendientes = obtener_alertas_pendientes()
-        return {'status': 'success', 'alertas': pendientes, 'count': len(pendientes)}
-    except Exception as e:
-        logger.error(f"Error en obtener_alertas: {e}", exc_info=True)
-        return {'status': 'error', 'message': str(e)}
+    alertas = obtener_alertas_no_leidas()
+    return [
+        {
+            'id': a.get('id'),
+            'tipo': a.get('tipo'),
+            'mac': a.get('mac'),
+            'ip': a.get('ip'),
+            'mensaje': a.get('mensaje'),
+            'fecha': a.get('fecha'),
+        }
+        for a in alertas
+    ]

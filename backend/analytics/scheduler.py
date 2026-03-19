@@ -1,17 +1,13 @@
-# backend/analytics/scheduler.py
-from clustering import compute_device_clusters
-from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
-from backend.analytics import ENGINE  
+from datetime import datetime
 
-def update_clusters_in_db():
-    df = compute_device_clusters(k=3)
-    Session = sessionmaker(bind=ENGINE)
-    session = Session()
-    # Ejecutar un UPDATE por cada fila
-    for _, row in df.iterrows():
-        session.execute(
-            text("UPDATE dispositivos SET cluster = :c WHERE dispositivo_id = :id"),
-            {'c': int(row.cluster), 'id': int(row.dispositivo_id)}
-        )
-    session.commit()
+from backend.database import calcular_siguiente_fecha
+
+
+def siguiente_ejecucion(fecha_actual: datetime, repeticion: str):
+    return calcular_siguiente_fecha(fecha_actual, repeticion)
+
+
+if __name__ == '__main__':
+    ahora = datetime.now()
+    for rep in ['una_vez', 'diario', 'semanal', 'mensual']:
+        print(rep, '->', siguiente_ejecucion(ahora, rep))
