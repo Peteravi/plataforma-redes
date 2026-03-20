@@ -1,6 +1,6 @@
-/* historial.css */
+/* historial.css - Diseño ultracompacto, sin espacios innecesarios */
 
-/* Body background image with gentle filter */
+/* Fondo fijo con imagen */
 body::before {
   content: "";
   position: fixed;
@@ -9,83 +9,214 @@ body::before {
   background-size: cover;
   filter: brightness(1.05) contrast(1.05) saturate(1.15);
   z-index: -1;
+  pointer-events: none;
 }
 
-/* Main content container for contrast */
-main.container {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 0.5rem;
-  padding: 2rem;
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+/* Contenedor principal: padding reducido */
+main.container-fluid {
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.3s ease-out;
 }
 
-/* Section titles with better contrast and spacing */
-.section-title {
-  color: #212529;
-  border-left: 4px solid #0d6efd;
-  padding-left: 0.5rem;
-  margin-bottom: 1rem;
-  font-weight: 700;
-  font-size: 1.5rem;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Card styling for all chart cards */
-.chart-card {
+/* Tarjetas: sin márgenes extra, sombras suaves */
+.card {
   background: #ffffff;
   border: none;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-  padding: 1rem;
+  border-radius: 0.7rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: cardAppear 0.25s ease forwards;
+  opacity: 0;
+  transform: translateY(4px);
 }
 
-/* Ensure canvases fill their card container */
-.chart-card canvas {
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes cardAppear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Retrasos escalonados */
+.card:nth-child(1) {
+  animation-delay: 0.01s;
+}
+
+.card:nth-child(2) {
+  animation-delay: 0.02s;
+}
+
+.card:nth-child(3) {
+  animation-delay: 0.03s;
+}
+
+.card:nth-child(4) {
+  animation-delay: 0.04s;
+}
+
+.card:nth-child(5) {
+  animation-delay: 0.05s;
+}
+
+.card:nth-child(6) {
+  animation-delay: 0.06s;
+}
+
+.card:nth-child(7) {
+  animation-delay: 0.07s;
+}
+
+/* Encabezados: padding mínimo */
+.card-header {
+  background-color: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 0.5rem 0.75rem 0 0.75rem;
+}
+
+.card-header h5 {
+  font-weight: 600;
+  color: #1e2a3a;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Cuerpo: padding reducido al mínimo */
+.card-body {
+  padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+}
+
+/* Gráficos: alturas muy contenidas */
+canvas {
+  max-height: 150px;
   width: 100% !important;
   height: auto !important;
 }
 
-/* Card headings */
-.card h5 {
-  color: #343a40;
-  font-size: 1.2rem;
-  margin-bottom: 0.75rem;
+/* Ajustes para gráficos que requieren un poco más de altura */
+#chart-top-devices,
+#chart-scan-duration,
+#chart-timeseries {
+  max-height: 180px;
 }
 
-/* Navbar adjustments for clarity */
-.navbar {
-  border-bottom: 2px solid rgba(255,255,255,0.1);
-}
-.navbar-brand {
-  font-size: 1.5rem;
-  color: #ffffff;
-}
-.nav-link {
-  font-size: 1rem;
-  color: #e9ecef;
-}
-.nav-link.active,
-.nav-link:hover {
-  color: #ffffff;
+/* Selector de período compacto */
+#period-select {
+  border-radius: 1.5rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid #ced4da;
+  background-color: white;
+  transition: all 0.2s;
+  font-size: 0.8rem;
 }
 
-/* Footer spacing if needed */
-footer {
-  margin-top: 3rem;
-  padding: 1rem 0;
-  text-align: center;
-  color: #6c757d;
+#period-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  transform: scale(1.02);
+  outline: none;
 }
 
-/* Responsive adjustments */
+/* Scrollbar personalizada (opcional) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsividad extrema */
+@media (max-width: 992px) {
+  main.container-fluid {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .card-header {
+    padding: 0.4rem 0.6rem 0 0.6rem;
+  }
+
+  .card-body {
+    padding: 0.4rem 0.6rem 0.6rem 0.6rem;
+  }
+}
+
 @media (max-width: 768px) {
-  main.container {
-    padding: 1rem;
+  .card-header h5 {
+    font-size: 0.85rem;
   }
-  .section-title {
-    font-size: 1.25rem;
+
+  canvas {
+    max-height: 130px;
   }
-  .chart-card {
-    padding: 0.75rem;
+
+  #chart-top-devices,
+  #chart-scan-duration,
+  #chart-timeseries {
+    max-height: 160px;
   }
+
+  .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.4rem;
+  }
+
+  #period-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-header h5 {
+    font-size: 0.8rem;
+  }
+
+  canvas {
+    max-height: 120px;
+  }
+
+  #chart-top-devices,
+  #chart-scan-duration,
+  #chart-timeseries {
+    max-height: 140px;
+  }
+}
+
+/* Mejora de accesibilidad */
+:focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
